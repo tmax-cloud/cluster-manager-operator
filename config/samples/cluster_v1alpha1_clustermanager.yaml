@@ -1,0 +1,15 @@
+apiVersion: cluster.tmax.io/v1alpha1
+kind: ClusterManager
+metadata:
+  name: clustermanager-sample
+spec:
+ provider: aws
+ version: v1.1.1
+ region: t
+ sshKey: t
+ masterNum: 1
+ masterType: t
+ workerNum: 1
+ workerType: t 
+status:
+  owner: cho
