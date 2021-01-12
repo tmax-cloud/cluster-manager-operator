@@ -235,7 +235,7 @@ func (r *ClusterManagerReconciler) CreateClusterMnagerOwnerRole(clusterManager *
 
 func (r *ClusterManagerReconciler) kubeadmControlPlaneUpdate(clusterManager *clusterv1alpha1.ClusterManager) {
 	kcp := &controlplanev1.KubeadmControlPlane{}
-	key := types.NamespacedName{Name: clusterManager.Name + "-control-plane", Namespace: CAPI_SYSTEM_NAMESPACE}
+	key := types.NamespacedName{Name: clusterManager.Name + "-control-plane", Namespace: clusterManager.Namespace}
 
 	if err := r.Get(context.TODO(), key, kcp); err != nil {
 		return
@@ -252,11 +252,14 @@ func (r *ClusterManagerReconciler) kubeadmControlPlaneUpdate(clusterManager *clu
 	if *kcp.Spec.Replicas != int32(clusterManager.Spec.MasterNum) {
 		*kcp.Spec.Replicas = int32(clusterManager.Spec.MasterNum)
 	}
+	if kcp.Spec.Version != clusterManager.Spec.Version {
+		kcp.Spec.Version = clusterManager.Spec.Version
+	}
 }
 
 func (r *ClusterManagerReconciler) machineDeploymentUpdate(clusterManager *clusterv1alpha1.ClusterManager) {
 	md := &clusterv1.MachineDeployment{}
-	key := types.NamespacedName{Name: clusterManager.Name + "-md-0", Namespace: CAPI_SYSTEM_NAMESPACE}
+	key := types.NamespacedName{Name: clusterManager.Name + "-md-0", Namespace: clusterManager.Namespace}
 
 	if err := r.Get(context.TODO(), key, md); err != nil {
 		return
@@ -273,6 +276,40 @@ func (r *ClusterManagerReconciler) machineDeploymentUpdate(clusterManager *clust
 	if *md.Spec.Replicas != int32(clusterManager.Spec.WorkerNum) {
 		*md.Spec.Replicas = int32(clusterManager.Spec.WorkerNum)
 	}
+
+	if *md.Spec.Template.Spec.Version != clusterManager.Spec.Version {
+		*md.Spec.Template.Spec.Version = clusterManager.Spec.Version
+	}
+}
+
+func (r *ClusterManagerReconciler) requeueClusterManagersForCluster(o handler.MapObject) []ctrl.Request {
+	c := o.Object.(*clusterv1.Cluster)
+
+	//get ClusterManager
+	clm := &clusterv1alpha1.ClusterManager{}
+	key := types.NamespacedName{Namespace: c.Namespace, Name: c.Name}
+
+	if err := r.Get(context.TODO(), key, clm); err != nil {
+		if errors.IsNotFound(err) {
+			log.Info("ClusterManager resource not found. Ignoring since object must be deleted.")
+			return nil
+		}
+
+		log.Error(err, "Failed to get ClusterManager")
+		return nil
+	}
+
+	//create helper for patch
+	helper, _ := patch.NewHelper(clm, r.Client)
+	defer func() {
+		if err := helper.Patch(context.TODO(), clm); err != nil {
+			log.Error(err, "ClusterManager patch error")
+		}
+	}()
+
+	clm.Status.Ready = c.Status.ControlPlaneInitialized
+
+	return nil
 }
 
 func (r *ClusterManagerReconciler) requeueClusterManagersForKubeadmControlPlane(o handler.MapObject) []ctrl.Request {
@@ -306,9 +343,7 @@ func (r *ClusterManagerReconciler) requeueClusterManagersForKubeadmControlPlane(
 		}
 	}()
 
-	clm.Spec.MasterNum = int(*cp.Spec.Replicas)
 	clm.Status.MasterRun = int(cp.Status.Replicas)
-	clm.Spec.Version = cp.Spec.Version
 
 	return nil
 }
@@ -344,7 +379,6 @@ func (r *ClusterManagerReconciler) requeueClusterManagersForMachineDeployment(o 
 		}
 	}()
 
-	clm.Spec.WorkerNum = int(*md.Spec.Replicas)
 	clm.Status.WorkerRun = int(md.Status.Replicas)
 
 	return nil
@@ -364,7 +398,7 @@ func (r *ClusterManagerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					oldCLM := e.ObjectOld.(*clusterv1alpha1.ClusterManager).DeepCopy()
 					newCLM := e.ObjectNew.(*clusterv1alpha1.ClusterManager).DeepCopy()
 
-					if oldCLM.Spec.MasterNum != newCLM.Spec.MasterNum || oldCLM.Spec.WorkerNum != newCLM.Spec.WorkerNum {
+					if oldCLM.Spec.MasterNum != newCLM.Spec.MasterNum || oldCLM.Spec.WorkerNum != newCLM.Spec.WorkerNum || oldCLM.Spec.Version != newCLM.Spec.Version {
 						return true
 					}
 					return false
@@ -384,6 +418,33 @@ func (r *ClusterManagerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	controller.Watch(
+		&source.Kind{Type: &clusterv1.Cluster{}},
+		&handler.EnqueueRequestsFromMapFunc{
+			ToRequests: handler.ToRequestsFunc(r.requeueClusterManagersForCluster),
+		},
+		predicate.Funcs{
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				oldc := e.ObjectOld.(*clusterv1.Cluster)
+				newc := e.ObjectNew.(*clusterv1.Cluster)
+
+				if &newc.Status != nil && oldc.Status.ControlPlaneInitialized == false && newc.Status.ControlPlaneInitialized == true {
+					return true
+				}
+				return false
+			},
+			CreateFunc: func(e event.CreateEvent) bool {
+				return false
+			},
+			DeleteFunc: func(e event.DeleteEvent) bool {
+				return false
+			},
+			GenericFunc: func(e event.GenericEvent) bool {
+				return false
+			},
+		},
+	)
+
+	controller.Watch(
 		&source.Kind{Type: &controlplanev1.KubeadmControlPlane{}},
 		&handler.EnqueueRequestsFromMapFunc{
 			ToRequests: handler.ToRequestsFunc(r.requeueClusterManagersForKubeadmControlPlane),
@@ -393,7 +454,7 @@ func (r *ClusterManagerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				oldKcp := e.ObjectOld.(*controlplanev1.KubeadmControlPlane)
 				newKcp := e.ObjectNew.(*controlplanev1.KubeadmControlPlane)
 
-				if *oldKcp.Spec.Replicas != *newKcp.Spec.Replicas || oldKcp.Status.Replicas != newKcp.Status.Replicas || oldKcp.Spec.Version != newKcp.Spec.Version {
+				if oldKcp.Status.Replicas != newKcp.Status.Replicas {
 					return true
 				}
 				return false
@@ -420,7 +481,7 @@ func (r *ClusterManagerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				oldMd := e.ObjectOld.(*clusterv1.MachineDeployment)
 				newMd := e.ObjectNew.(*clusterv1.MachineDeployment)
 
-				if *oldMd.Spec.Replicas != *newMd.Spec.Replicas || oldMd.Status.Replicas != newMd.Status.Replicas {
+				if oldMd.Status.Replicas != newMd.Status.Replicas {
 					return true
 				}
 				return false
