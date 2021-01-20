@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   labels:
-    control-plane: controller-manager
+    hypercloud: cluster-manager-operator
   name: system
 ---
 apiVersion: apps/v1
@@ -11,19 +11,17 @@ metadata:
   name: controller-manager
   namespace: system
   labels:
-    control-plane: controller-manager
+    hypercloud: cluster-manager-operator
 spec:
   selector:
     matchLabels:
-      control-plane: controller-manager
+      hypercloud: cluster-manager-operator
   replicas: 1
   template:
     metadata:
       labels:
-        control-plane: controller-manager
+        hypercloud: cluster-manager-operator
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: ck4-1
       containers:
       - command:
         - /manager

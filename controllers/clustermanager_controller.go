@@ -46,9 +46,7 @@ const (
 	CLUSTER_API_GROUP           = "cluster.tmax.io"
 	CLAIM_API_Kind              = "clusterclaims"
 	CLAIM_API_GROUP_VERSION     = "claims.tmax.io/v1alpha1"
-	HCR_API_GROUP_VERSION       = "multi.hyper.tmax.io/v1"
-	HYPERCLOUD_SYSTEM_NAMESPACE = "hypercloud5-system"
-	HCR_SYSTEM_NAMESPACE        = "kube-federation-system"
+	HYPERCLOUD_SYSTEM_NAMESPACE = ""
 )
 
 type ClusterParameter struct {
@@ -73,6 +71,8 @@ type ClusterManagerReconciler struct {
 // +kubebuilder:rbac:groups=cluster.tmax.io,resources=clustermanagers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machinedeployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machinedeployments/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=kubeadmcontrolplanes,verbs=get;list;watch;create;update;patch;delete
@@ -139,7 +139,7 @@ func (r *ClusterManagerReconciler) CreateServiceInstance(clusterManager *cluster
 			newServiceInstance := &servicecatalogv1beta1.ServiceInstance{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      clusterManager.Name,
-					Namespace: clusterManager.Namespace,
+					Namespace: CAPI_SYSTEM_NAMESPACE,
 				},
 				Spec: servicecatalogv1beta1.ServiceInstanceSpec{
 					PlanReference: servicecatalogv1beta1.PlanReference{
@@ -167,15 +167,14 @@ func (r *ClusterManagerReconciler) CreateServiceInstance(clusterManager *cluster
 }
 
 func (r *ClusterManagerReconciler) CreateClusterMnagerOwnerRole(clusterManager *clusterv1alpha1.ClusterManager) error {
-	role := &rbacv1.Role{}
-	roleName := clusterManager.Annotations["owner"] + "-" + clusterManager.Name + "-clm-role"
-	roleKey := types.NamespacedName{Name: roleName, Namespace: HYPERCLOUD_SYSTEM_NAMESPACE}
-	if err := r.Get(context.TODO(), roleKey, role); err != nil {
+	clusterRole := &rbacv1.ClusterRole{}
+	clusterRoleName := clusterManager.Annotations["owner"] + "-" + clusterManager.Name + "-clm-clusterRole"
+	clusterRoleKey := types.NamespacedName{Name: clusterRoleName, Namespace: HYPERCLOUD_SYSTEM_NAMESPACE}
+	if err := r.Get(context.TODO(), clusterRoleKey, clusterRole); err != nil {
 		if errors.IsNotFound(err) {
-			newRole := &rbacv1.Role{
+			newClusterRole := &rbacv1.ClusterRole{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      roleName,
-					Namespace: HYPERCLOUD_SYSTEM_NAMESPACE,
+					Name: clusterRoleName,
 				},
 				Rules: []rbacv1.PolicyRule{
 					{APIGroups: []string{CLUSTER_API_GROUP}, Resources: []string{"clustermanagers"},
@@ -184,45 +183,43 @@ func (r *ClusterManagerReconciler) CreateClusterMnagerOwnerRole(clusterManager *
 						ResourceNames: []string{clusterManager.Name}, Verbs: []string{"get"}},
 				},
 			}
-			ctrl.SetControllerReference(clusterManager, newRole, r.Scheme)
-			err := r.Create(context.TODO(), newRole)
+			ctrl.SetControllerReference(clusterManager, newClusterRole, r.Scheme)
+			err := r.Create(context.TODO(), newClusterRole)
 			if err != nil {
-				log.Error(err, "Failed to create "+roleName+" role.")
+				log.Error(err, "Failed to create "+clusterRoleName+" clusterRole.")
 				return err
 			}
 		} else {
-			log.Error(err, "Failed to get role")
+			log.Error(err, "Failed to get clusterRole")
 			return err
 		}
 	}
-	roleBinding := &rbacv1.RoleBinding{}
-	roleBindingName := clusterManager.Annotations["owner"] + "-" + clusterManager.Name + "-clm-rolebinding"
-	roleBindingKey := types.NamespacedName{Name: clusterManager.Name, Namespace: HYPERCLOUD_SYSTEM_NAMESPACE}
-	if err := r.Get(context.TODO(), roleBindingKey, roleBinding); err != nil {
+	clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
+	clusterRoleBindingName := clusterManager.Annotations["owner"] + "-" + clusterManager.Name + "-clm-rolebinding"
+	clusterRoleBindingKey := types.NamespacedName{Name: clusterRoleBindingName, Namespace: HYPERCLOUD_SYSTEM_NAMESPACE}
+	if err := r.Get(context.TODO(), clusterRoleBindingKey, clusterRoleBinding); err != nil {
 		if errors.IsNotFound(err) {
-			newRoleBinding := &rbacv1.RoleBinding{
+			newClusterRoleBinding := &rbacv1.ClusterRoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      roleBindingName,
-					Namespace: HYPERCLOUD_SYSTEM_NAMESPACE,
+					Name: clusterRoleBindingName,
 				},
 				RoleRef: rbacv1.RoleRef{
 					APIGroup: "rbac.authorization.k8s.io",
-					Kind:     "Role",
-					Name:     roleName,
+					Kind:     "ClusterRole",
+					Name:     clusterRoleName,
 				},
 				Subjects: []rbacv1.Subject{
 					{
 						APIGroup: "rbac.authorization.k8s.io",
 						Kind:     "User",
 						Name:     clusterManager.Annotations["owner"],
-						// Namespace: HCR_SYSTEM_NAMESPACE,
 					},
 				},
 			}
-			ctrl.SetControllerReference(clusterManager, newRoleBinding, r.Scheme)
-			err = r.Create(context.TODO(), newRoleBinding)
+			ctrl.SetControllerReference(clusterManager, newClusterRoleBinding, r.Scheme)
+			err = r.Create(context.TODO(), newClusterRoleBinding)
 			if err != nil {
-				log.Error(err, "Failed to create "+roleBindingName+" role.")
+				log.Error(err, "Failed to create "+clusterRoleBindingName+" clusterRole.")
 				return err
 			}
 		} else {
@@ -235,7 +232,7 @@ func (r *ClusterManagerReconciler) CreateClusterMnagerOwnerRole(clusterManager *
 
 func (r *ClusterManagerReconciler) kubeadmControlPlaneUpdate(clusterManager *clusterv1alpha1.ClusterManager) {
 	kcp := &controlplanev1.KubeadmControlPlane{}
-	key := types.NamespacedName{Name: clusterManager.Name + "-control-plane", Namespace: clusterManager.Namespace}
+	key := types.NamespacedName{Name: clusterManager.Name + "-control-plane", Namespace: CAPI_SYSTEM_NAMESPACE}
 
 	if err := r.Get(context.TODO(), key, kcp); err != nil {
 		return
@@ -259,7 +256,7 @@ func (r *ClusterManagerReconciler) kubeadmControlPlaneUpdate(clusterManager *clu
 
 func (r *ClusterManagerReconciler) machineDeploymentUpdate(clusterManager *clusterv1alpha1.ClusterManager) {
 	md := &clusterv1.MachineDeployment{}
-	key := types.NamespacedName{Name: clusterManager.Name + "-md-0", Namespace: clusterManager.Namespace}
+	key := types.NamespacedName{Name: clusterManager.Name + "-md-0", Namespace: CAPI_SYSTEM_NAMESPACE}
 
 	if err := r.Get(context.TODO(), key, md); err != nil {
 		return

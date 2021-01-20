@@ -45,7 +45,7 @@ spec:
     shortNames:
     - clm
     singular: clustermanager
-  scope: Namespaced
+  scope: Cluster
   subresources:
     status: {}
   validation:
@@ -75,21 +75,28 @@ spec:
           description: ClusterManagerSpec defines the desired state of ClusterManager
           properties:
             masterNum:
+              description: The number of master node
               type: integer
             masterType:
+              description: The type of VM for master node
               type: string
             provider:
-              description: ClusterName string `json:"clusterManager,omitempty"`
+              description: The name of cloud provider where VM is created
               type: string
             region:
+              description: The region where VM is working
               type: string
             sshKey:
+              description: The ssh key info to access VM
               type: string
             version:
+              description: The version of kubernetes
               type: string
             workerNum:
+              description: The number of worker node
               type: integer
             workerType:
+              description: The type of VM for worker node
               type: string
           type: object
         status:

@@ -45,14 +45,21 @@ type ResourceType struct {
 
 // ClusterManagerSpec defines the desired state of ClusterManager
 type ClusterManagerSpec struct {
-	// ClusterName string `json:"clusterManager,omitempty"`
-	Provider   string `json:"provider,omitempty"`
-	Version    string `json:"version,omitempty"`
-	Region     string `json:"region,omitempty"`
-	SshKey     string `json:"sshKey,omitempty"`
-	MasterNum  int    `json:"masterNum,omitempty"`
+	// The name of cloud provider where VM is created
+	Provider string `json:"provider,omitempty"`
+	// The version of kubernetes
+	Version string `json:"version,omitempty"`
+	// The region where VM is working
+	Region string `json:"region,omitempty"`
+	// The ssh key info to access VM
+	SshKey string `json:"sshKey,omitempty"`
+	// The number of master node
+	MasterNum int `json:"masterNum,omitempty"`
+	// The type of VM for master node
 	MasterType string `json:"masterType,omitempty"`
-	WorkerNum  int    `json:"workerNum,omitempty"`
+	// The number of worker node
+	WorkerNum int `json:"workerNum,omitempty"`
+	// The type of VM for worker node
 	WorkerType string `json:"workerType,omitempty"`
 }
 
@@ -70,7 +77,7 @@ type ClusterManagerStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=clustermanagers,scope=Namespaced,shortName=clm
+// +kubebuilder:resource:path=clustermanagers,scope=Cluster,shortName=clm
 // +kubebuilder:printcolumn:name="Provider",type="string",JSONPath=".spec.provider",description="provider"
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version",description="k8s version"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="is running"
