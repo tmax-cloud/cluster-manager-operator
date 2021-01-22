@@ -47,12 +47,10 @@ type ResourceType struct {
 type ClusterManagerSpec struct {
 	// The name of cloud provider where VM is created
 	Provider string `json:"provider,omitempty"`
-	// The version of kubernetes
-	Version string `json:"version,omitempty"`
 	// The region where VM is working
 	Region string `json:"region,omitempty"`
-	// The ssh key info to access VM
-	SshKey string `json:"sshKey,omitempty"`
+	// The version of kubernetes
+	Version string `json:"version,omitempty"`
 	// The number of master node
 	MasterNum int `json:"masterNum,omitempty"`
 	// The type of VM for master node
@@ -61,6 +59,8 @@ type ClusterManagerSpec struct {
 	WorkerNum int `json:"workerNum,omitempty"`
 	// The type of VM for worker node
 	WorkerType string `json:"workerType,omitempty"`
+	// The ssh key info to access VM
+	SshKey string `json:"sshKey,omitempty"`
 }
 
 // ClusterManagerStatus defines the observed state of ClusterManager

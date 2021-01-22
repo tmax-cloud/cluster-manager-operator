@@ -116,7 +116,7 @@ func (r *ClusterManagerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 func (r *ClusterManagerReconciler) CreateServiceInstance(clusterManager *clusterv1alpha1.ClusterManager) error {
 
 	serviceInstance := &servicecatalogv1beta1.ServiceInstance{}
-	serviceInstanceKey := types.NamespacedName{Name: clusterManager.Name, Namespace: HYPERCLOUD_SYSTEM_NAMESPACE}
+	serviceInstanceKey := types.NamespacedName{Name: clusterManager.Name, Namespace: CAPI_SYSTEM_NAMESPACE}
 	if err := r.Get(context.TODO(), serviceInstanceKey, serviceInstance); err != nil {
 		if errors.IsNotFound(err) {
 			clusterParameter := ClusterParameter{
@@ -168,8 +168,8 @@ func (r *ClusterManagerReconciler) CreateServiceInstance(clusterManager *cluster
 
 func (r *ClusterManagerReconciler) CreateClusterMnagerOwnerRole(clusterManager *clusterv1alpha1.ClusterManager) error {
 	clusterRole := &rbacv1.ClusterRole{}
-	clusterRoleName := clusterManager.Annotations["owner"] + "-" + clusterManager.Name + "-clm-clusterRole"
-	clusterRoleKey := types.NamespacedName{Name: clusterRoleName, Namespace: HYPERCLOUD_SYSTEM_NAMESPACE}
+	clusterRoleName := clusterManager.Annotations["owner"] + "-" + clusterManager.Name + "-clm-role"
+	clusterRoleKey := types.NamespacedName{Name: clusterRoleName, Namespace: ""}
 	if err := r.Get(context.TODO(), clusterRoleKey, clusterRole); err != nil {
 		if errors.IsNotFound(err) {
 			newClusterRole := &rbacv1.ClusterRole{
@@ -196,7 +196,7 @@ func (r *ClusterManagerReconciler) CreateClusterMnagerOwnerRole(clusterManager *
 	}
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
 	clusterRoleBindingName := clusterManager.Annotations["owner"] + "-" + clusterManager.Name + "-clm-rolebinding"
-	clusterRoleBindingKey := types.NamespacedName{Name: clusterRoleBindingName, Namespace: HYPERCLOUD_SYSTEM_NAMESPACE}
+	clusterRoleBindingKey := types.NamespacedName{Name: clusterRoleBindingName, Namespace: ""}
 	if err := r.Get(context.TODO(), clusterRoleBindingKey, clusterRoleBinding); err != nil {
 		if errors.IsNotFound(err) {
 			newClusterRoleBinding := &rbacv1.ClusterRoleBinding{
@@ -284,7 +284,7 @@ func (r *ClusterManagerReconciler) requeueClusterManagersForCluster(o handler.Ma
 
 	//get ClusterManager
 	clm := &clusterv1alpha1.ClusterManager{}
-	key := types.NamespacedName{Namespace: c.Namespace, Name: c.Name}
+	key := types.NamespacedName{Namespace: "", Name: c.Name}
 
 	if err := r.Get(context.TODO(), key, clm); err != nil {
 		if errors.IsNotFound(err) {
@@ -321,7 +321,7 @@ func (r *ClusterManagerReconciler) requeueClusterManagersForKubeadmControlPlane(
 
 	//get ClusterManager
 	clm := &clusterv1alpha1.ClusterManager{}
-	key := types.NamespacedName{Namespace: HYPERCLOUD_SYSTEM_NAMESPACE, Name: cp.Name[0 : len(cp.Name)-len("-control-plane")]}
+	key := types.NamespacedName{Namespace: "", Name: cp.Name[0 : len(cp.Name)-len("-control-plane")]}
 	if err := r.Get(context.TODO(), key, clm); err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("ClusterManager resource not found. Ignoring since object must be deleted.")
@@ -357,7 +357,7 @@ func (r *ClusterManagerReconciler) requeueClusterManagersForMachineDeployment(o 
 
 	//get ClusterManager
 	clm := &clusterv1alpha1.ClusterManager{}
-	key := types.NamespacedName{Namespace: HYPERCLOUD_SYSTEM_NAMESPACE, Name: md.Name[0 : len(md.Name)-len("-md-0")]}
+	key := types.NamespacedName{Namespace: "", Name: md.Name[0 : len(md.Name)-len("-md-0")]}
 	if err := r.Get(context.TODO(), key, clm); err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("ClusterManager resource not found. Ignoring since object must be deleted.")
