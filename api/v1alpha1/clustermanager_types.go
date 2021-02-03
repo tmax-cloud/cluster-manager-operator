@@ -73,6 +73,7 @@ type ClusterManagerStatus struct {
 	Node      []NodeInfo `json:"nodes,omitempty"`
 	Owner     string     `json:"owner,omitempty"`
 	Members   []string   `json:"members,omitempty"`
+	Groups    []string   `json:"groups,omitempty"`
 }
 
 // +kubebuilder:object:root=true
