@@ -102,6 +102,10 @@ spec:
         status:
           description: ClusterManagerStatus defines the observed state of ClusterManager
           properties:
+            groups:
+              items:
+                type: string
+              type: array
             masterRun:
               type: integer
             members:
