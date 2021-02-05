@@ -103,15 +103,15 @@ spec:
           description: ClusterManagerStatus defines the observed state of ClusterManager
           properties:
             groups:
-              items:
+              additionalProperties:
                 type: string
-              type: array
+              type: object
             masterRun:
               type: integer
             members:
-              items:
+              additionalProperties:
                 type: string
-              type: array
+              type: object
             nodes:
               items:
                 properties:
@@ -135,7 +135,9 @@ spec:
                 type: object
               type: array
             owner:
-              type: string
+              additionalProperties:
+                type: string
+              type: object
             provider:
               type: string
             ready:

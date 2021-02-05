@@ -109,15 +109,26 @@ func (in *ClusterManagerStatus) DeepCopyInto(out *ClusterManagerStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Owner != nil {
+		in, out := &in.Owner, &out.Owner
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.Members != nil {
 		in, out := &in.Members, &out.Members
-		*out = make([]string, len(*in))
-		copy(*out, *in)
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
 	}
 	if in.Groups != nil {
 		in, out := &in.Groups, &out.Groups
-		*out = make([]string, len(*in))
-		copy(*out, *in)
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
 	}
 }
 
