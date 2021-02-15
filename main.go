@@ -21,8 +21,6 @@ import (
 	"os"
 
 	servicecatalogv1beta1 "github.com/kubernetes-sigs/service-catalog/pkg/apis/servicecatalog/v1beta1"
-	clusterv1alpha1 "github.com/tmax-cloud/cluster-manager-operator/api/v1alpha1"
-	"github.com/tmax-cloud/cluster-manager-operator/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -31,6 +29,9 @@ import (
 	controlplanev1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1alpha3"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	clusterv1alpha1 "github.com/tmax-cloud/cluster-manager-operator/api/v1alpha1"
+	"github.com/tmax-cloud/cluster-manager-operator/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -77,6 +78,10 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterManager")
+		os.Exit(1)
+	}
+	if err = (&clusterv1alpha1.ClusterManager{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ClusterManager")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

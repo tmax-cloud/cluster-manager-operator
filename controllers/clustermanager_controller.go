@@ -50,14 +50,15 @@ const (
 )
 
 type ClusterParameter struct {
-	ClusterName string
-	AWSRegion   string
-	SshKey      string
-	MasterNum   int
-	MasterType  string
-	WorkerNum   int
-	WorkerType  string
-	Owner       string
+	ClusterName       string
+	AWSRegion         string
+	SshKey            string
+	MasterNum         int
+	MasterType        string
+	WorkerNum         int
+	WorkerType        string
+	Owner             string
+	KubernetesVersion string
 }
 
 // ClusterManagerReconciler reconciles a ClusterManager object
@@ -120,14 +121,15 @@ func (r *ClusterManagerReconciler) CreateServiceInstance(clusterManager *cluster
 	if err := r.Get(context.TODO(), serviceInstanceKey, serviceInstance); err != nil {
 		if errors.IsNotFound(err) {
 			clusterParameter := ClusterParameter{
-				ClusterName: clusterManager.Name,
-				AWSRegion:   clusterManager.Spec.Region,
-				SshKey:      clusterManager.Spec.SshKey,
-				MasterNum:   clusterManager.Spec.MasterNum,
-				MasterType:  clusterManager.Spec.MasterType,
-				WorkerNum:   clusterManager.Spec.WorkerNum,
-				WorkerType:  clusterManager.Spec.WorkerType,
-				Owner:       clusterManager.Annotations["owner"],
+				ClusterName:       clusterManager.Name,
+				AWSRegion:         clusterManager.Spec.Region,
+				SshKey:            clusterManager.Spec.SshKey,
+				MasterNum:         clusterManager.Spec.MasterNum,
+				MasterType:        clusterManager.Spec.MasterType,
+				WorkerNum:         clusterManager.Spec.WorkerNum,
+				WorkerType:        clusterManager.Spec.WorkerType,
+				Owner:             clusterManager.Annotations["owner"],
+				KubernetesVersion: clusterManager.Spec.Version,
 			}
 
 			byte, err := json.Marshal(&clusterParameter)

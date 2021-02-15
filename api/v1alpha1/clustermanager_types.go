@@ -74,9 +74,6 @@ type ClusterManagerStatus struct {
 	Owner     map[string]string `json:"owner,omitempty"`
 	Members   map[string]string `json:"members,omitempty"`
 	Groups    map[string]string `json:"groups,omitempty"`
-	// 	Owner     string     `json:"owner,omitempty"`
-	// 	Members   []string   `json:"members,omitempty"`
-	// 	Groups    []string   `json:"groups,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: tmaxcloudck/cluster-manager-operator
-  newTag: b5.0.2.2
+  newTag: b5.0.4.10
